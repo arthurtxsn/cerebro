@@ -3,8 +3,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 def process_eeg(file_path):
-    # Carregar o arquivo TXT grande em chunks para evitar sobrecarga de memória
-    chunk_size = 5000  # Define o tamanho do lote de leitura
+    
+    chunk_size = 2500
     chunks = []
     
     for chunk in pd.read_csv(file_path, chunksize=chunk_size):
@@ -12,17 +12,14 @@ def process_eeg(file_path):
     
     df = pd.concat(chunks, ignore_index=True)
     
-    # Converter colunas para inteiros para evitar problemas de chave
     df.columns = df.columns.astype(str)
     
-    # Calcular a média de cada canal (ignorando a coluna Time)
+
     mean_values = df.iloc[:, 1:].mean()
-    mean_values.index = mean_values.index.astype(int)  # Convertendo os índices para inteiros
+    mean_values.index = mean_values.index.astype(int)  
     
-    # Selecionar os 20 canais com maior média
     top_channels = mean_values.nlargest(20).index.tolist()
     
-    # Mapeamento dos canais baseado no sistema internacional 10-20
     electrode_positions = {
         1: (-1, 3), 2: (0, 3), 3: (1, 3), 4: (-1.5, 2), 5: (-0.5, 2), 6: (0.5, 2), 7: (1.5, 2),
         8: (-2, 1), 9: (-1, 1), 10: (0, 1), 11: (1, 1), 12: (2, 1), 13: (-2, 0), 14: (-1, 0),
@@ -37,23 +34,18 @@ def process_eeg(file_path):
         63: (-3.5, -0.5), 64: (3.5, -0.5)
     }
     
-    # Criar o grafo
     G = nx.Graph()
     
-    # Adicionar os nós APENAS se estiverem no dicionário de posições
     for channel in mean_values.index:
         if channel in electrode_positions:
             G.add_node(channel, weight=mean_values[channel])
     
-    # Conectar o canal 32 aos 20 canais com maior média, filtrando apenas os que têm posição
     for channel in top_channels:
         if channel in electrode_positions:
             G.add_edge(32, channel, weight=mean_values[channel])
     
-    # Criar a posição dos nós apenas para os que estão no grafo
     pos = {node: electrode_positions[node] for node in G.nodes if node in electrode_positions}
-    
-    # Desenhar o grafo
+   
     plt.figure(figsize=(10, 10))
     nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=500, font_size=10)
     
@@ -62,5 +54,4 @@ def process_eeg(file_path):
     
     return mean_values, G
 
-# Processando o arquivo com 19682 linhas
 mean_values, G = process_eeg("S109R03_data.txt")
